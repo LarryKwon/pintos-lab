@@ -88,6 +88,9 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    
+    int64_t wakeup_tick;                /* wake up tick, after sleep */
+    
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -125,6 +128,17 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+
+
+/*alarm clock */
+void thread_sleep(int64_t ticks); // 실행 중인 쓰레드를 sleep으로 전환
+void thread_awake(int64_t ticks); // sleep_list에서 깨워야할 쓰레드를 깨운다.
+void update_next_tick_to_awake(int64_t ticks); //그 다음에 재워야할 쓰레드에 대한 tick을 업데이트
+int64_t get_next_tick_to_awake(void);          // next_tick_to_awake를 반환하는 함수
+
+
+/* priority scheduling*/
+bool cmp_priority( const struct list_elem* a, const struct list_elem* b, void* aux);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
