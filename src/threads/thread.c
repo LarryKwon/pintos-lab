@@ -386,6 +386,14 @@ bool cmp_priority(const struct list_elem* a, const struct list_elem* b, void* au
   return false;
 }
 
+void test_max_prioriry(){
+  struct thread *cur = thread_current();
+  if(!list_empty(&ready_list)){
+    struct thread* head = list_entry(list_front(&ready_list), struct thread, elem);
+    if(head->priority > cur ->priority) thread_yield();
+  }
+}
+
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
 void thread_foreach(thread_action_func *func, void *aux)

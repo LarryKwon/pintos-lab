@@ -139,7 +139,7 @@ int64_t get_next_tick_to_awake(void);          // next_tick_to_awake를 반환�
 
 /* priority scheduling*/
 bool cmp_priority( const struct list_elem* a, const struct list_elem* b, void* aux);
-
+void test_max_priority();
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
