@@ -336,3 +336,13 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
+
+bool
+cmp_sema_priority(const struct list_elem *a, const struct list_elem* b, void * aux UNUSED){
+  struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem *sb = list_entry(b,struct semaphore_elem, elem);
+  int sa_priority = list_entry(list_front(&(&sa->semaphore)->waiters), struct thread, elem)->priority;
+  int sb_priority = list_entry(list_front(&(&sb->semaphore)->waiters),struct thread, elem)->priority;
+  if(sa_priority > sb_priority) return true;
+  else return false;
+}
