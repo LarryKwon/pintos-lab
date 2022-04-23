@@ -210,7 +210,7 @@ tid_t thread_create(const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock(t);
-  test_max_prioriry();
+  test_max_priority();
 
   return tid;
 }
@@ -324,7 +324,6 @@ void thread_yield(void)
 }
 
 /* 실행 중인 쓰레드를 sleep으로 전환 */
-
 void thread_sleep(int64_t ticks)
 {
   struct thread *cur = thread_current();
@@ -378,8 +377,11 @@ int64_t get_next_tick_to_awake(void)
   return next_tick_to_awake;
 }
 
-
-/*쓰레드 간의 우선순위를 비교 for priority scheduling*/
+/*
+priority scheduling
+쓰레드 간의 우선순위를 비교
+struct thread에 들어있는 list_eleme을 인자로 받고, 복구해서 priority 비교
+*/
 bool cmp_priority(const struct list_elem* a, const struct list_elem* b, void* aux){
   struct thread *thread1 = list_entry(a, struct thread, elem);
   struct thread *thread2 = list_entry(b,struct thread, elem);
@@ -387,7 +389,11 @@ bool cmp_priority(const struct list_elem* a, const struct list_elem* b, void* au
   return false;
 }
 
-void test_max_prioriry(){
+/*
+priority scheduling
+현재 진행중인 쓰레드와 ready queue에 있는 친구들을 비교해서 선점할 수 있도록
+*/
+void test_max_priority(){
   struct thread *cur = thread_current();
   if(!list_empty(&ready_list)){
     struct thread* head = list_entry(list_front(&ready_list), struct thread, elem);
@@ -415,7 +421,7 @@ void thread_foreach(thread_action_func *func, void *aux)
 void thread_set_priority(int new_priority)
 {
   thread_current()->priority = new_priority;
-  test_max_prioriry();
+  test_max_priority();
 }
 
 /* Returns the current thread's priority. */
