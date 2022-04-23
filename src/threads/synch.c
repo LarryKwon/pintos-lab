@@ -195,6 +195,15 @@ void lock_acquire(struct lock *lock)
   ASSERT(!intr_context());
   ASSERT(!lock_held_by_current_thread(lock));
 
+  struct thread* cur_thread = thread_current();
+  struct thread* donee = lock->holder;
+  
+  if(donee != null){
+    cur_thread->wait_on_lock = lock;
+    list_insert_ordered(donee->donations,cur_thread->d_elem, cmp_donation_elem_priority,NULL);
+    donate_priority();
+  }
+
   sema_down(&lock->semaphore);
   lock->holder = thread_current();
 }
@@ -228,6 +237,10 @@ void lock_release(struct lock *lock)
   ASSERT(lock != NULL);
   ASSERT(lock_held_by_current_thread(lock));
 
+  /* priority donation */
+  remove_with_lock(lock);
+  refresh_priority();
+  
   lock->holder = NULL;
   sema_up(&lock->semaphore);
 }
@@ -345,4 +358,49 @@ bool cmp_sema_priority(const struct list_elem *a, const struct list_elem *b, voi
     return true;
   else
     return false;
+}
+
+/* priority donation */
+
+/* priority donating*/
+void donate_priority(){
+  int depth = 0;
+  struct thread *t = thread_current();
+  for(depth = 0; depth < 8; depth ++){
+    struct thread* donee = t->wait_on_lock->holder;
+    if(donee == NULL) break;
+    donee->priority = t->priority;
+  }
+}
+void remove_with_lock(struct lock *lock){
+  struct thread* t = lock->holder;
+  ASSERT(t!=thread_current());
+  if(!list_empty(t->donations)){
+    struct list* donation_list = t->donations;
+    struct list_elem* e;
+    for(e = list_begin(donation_list); e!=list_end(donation_list); e = list_next(e) ){
+      struct thread* donor = list_entry(e,struct thread, d_elem);
+      if(donor->wait_on_lock == lock){
+        list_remove(e);
+      }
+    }
+  }
+}
+
+void refresh_priority(){
+  struct thread* t = thread_current();
+  int priority = t->init_priority;
+  struct list_elem* e;
+  for(e=list_begin(t->donations); e!=list_end(t->donations); e = list_next(e)){
+    struct thread* donor = list_entry(e,struct thread, d_elem);
+    if(priority < donor->priority) priority = donor->priority;
+  }
+  t->priority = priority;
+}
+
+bool cmp_donation_elem_priority(const struct list_elem* a, const_struct list_elem* b, void* aux UNUSED){
+  struct thread* thread_a = list_entry(a,struct thread, d_elem);
+  struct thread* thread_b = list_entry(b,struct thread, d_elem);
+  if(thread_a > thread_b ) return true;
+  return false;
 }

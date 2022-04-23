@@ -44,6 +44,11 @@ void cond_broadcast (struct condition *, struct lock *);
 /*priority-scheduling & synchronization*/
 bool cmp_sema_priority(const struct list_elem *a, const struct list_elem* b, void* aux);
 
+/* priority donation */
+void donate_priority();
+void remove_with_lock(struct lock *lock);
+void refresh_priority();
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an
