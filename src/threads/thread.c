@@ -246,8 +246,16 @@ void thread_unblock(struct thread *t)
 
   old_level = intr_disable();
   ASSERT(t->status == THREAD_BLOCKED);
+  // printf("unblocked thread: %s  priority: %d\n", t->name, t->priority);
+  // struct list_elem *e;
+  // for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e))
+  // {
+  //   struct thread *t = list_entry(e, struct thread, elem);
+  //   printf("thread %s, priority %d in ready list \n", t->name, t->priority);
+  //   // msg("thread %s, priority: %d in ready list", list_entry(e,struct thread,elem)->name, list_entry(e,struct thread,elem)->priority);
+  // }
   
-  list_insert_ordered(&ready_list,&t->elem,cmp_priority,0);
+  list_insert_ordered(&ready_list, &t->elem, cmp_priority, 0);
   // list_push_back(&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level(old_level);
@@ -316,8 +324,8 @@ void thread_yield(void)
 
   old_level = intr_disable();
   if (cur != idle_thread)
-    list_insert_ordered(&ready_list,&cur->elem,cmp_priority,0);
-    // list_push_back(&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, cmp_priority, 0);
+  // list_push_back(&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule();
   intr_set_level(old_level);
@@ -382,10 +390,12 @@ priority scheduling
 쓰레드 간의 우선순위를 비교
 struct thread에 들어있는 list_eleme을 인자로 받고, 복구해서 priority 비교
 */
-bool cmp_priority(const struct list_elem* a, const struct list_elem* b, void* aux){
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux)
+{
   struct thread *thread1 = list_entry(a, struct thread, elem);
-  struct thread *thread2 = list_entry(b,struct thread, elem);
-  if(thread1->priority > thread2->priority) return true;
+  struct thread *thread2 = list_entry(b, struct thread, elem);
+  if (thread1->priority > thread2->priority)
+    return true;
   return false;
 }
 
@@ -393,11 +403,14 @@ bool cmp_priority(const struct list_elem* a, const struct list_elem* b, void* au
 priority scheduling
 현재 진행중인 쓰레드와 ready queue에 있는 친구들을 비교해서 선점할 수 있도록
 */
-void test_max_priority(){
+void test_max_priority()
+{
   struct thread *cur = thread_current();
-  if(!list_empty(&ready_list)){
-    struct thread* head = list_entry(list_front(&ready_list), struct thread, elem);
-    if(head->priority > cur ->priority) thread_yield();
+  if (!list_empty(&ready_list))
+  {
+    struct thread *head = list_entry(list_front(&ready_list), struct thread, elem);
+    if (head->priority > cur->priority)
+      thread_yield();
   }
 }
 

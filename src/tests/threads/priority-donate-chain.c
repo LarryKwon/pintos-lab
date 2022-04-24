@@ -88,9 +88,9 @@ donor_thread_func (void *locks_)
   struct lock_pair *locks = locks_;
 
   if (locks->first)
-    lock_acquire (locks->first);
+    lock_acquire (locks->first); // 자기꺼 i
 
-  lock_acquire (locks->second);
+  lock_acquire (locks->second); //원하는거, i-1
   msg ("%s got lock", thread_name ());
 
   lock_release (locks->second);
@@ -99,7 +99,7 @@ donor_thread_func (void *locks_)
         thread_get_priority ());
 
   if (locks->first)
-    lock_release (locks->first);
+    lock_release (locks->first); //자기꺼 i
 
   msg ("%s finishing with priority %d.", thread_name (),
                                          thread_get_priority ());
