@@ -1,6 +1,6 @@
-#define F (1<<14)
-#define INT_MAX((1<<31) -1)
-#define INT_MIN(-(1<<31))
+#define F (1 << 14)
+#define INT_MAX ((1 << 31) - 1)
+#define INT_MIN (-(1 << 31))
 
 int int_to_fp(int n); /* integer에서 fixed point로*/
 int fp_to_int_round(int x); /* fixed point에서 int로, 반올림 */
@@ -23,7 +23,7 @@ int fp_to_int_round(int x){
 }
 
 int fp_to_int(int x){
-    return n/F;
+    return x/F;
 }
 
 int add_fp(int x, int y){

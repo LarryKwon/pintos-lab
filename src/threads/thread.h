@@ -169,5 +169,6 @@ void mlfqs_recent_cpu(struct thread *t);
 void mlfqs_load_avg(void);
 void mlfqs_increment(void);
 void mlfqs_recalc(void);
-
+void mlfsqs_recalc_recent_cpu(void);
+void mlfsqs_recalc_priority(void);
 #endif /* threads/thread.h */

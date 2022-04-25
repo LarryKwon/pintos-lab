@@ -245,6 +245,7 @@ void lock_release(struct lock *lock)
   // msg("thread %s release lock %d", lock->holder->name, lock->semaphore.value);
   /* priority donation */
   if(thread_mlfqs){
+    lock->holder = NULL;
     sema_up(&lock->semaphore);
     return;
   }
