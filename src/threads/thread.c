@@ -504,15 +504,37 @@ int thread_get_recent_cpu(void)
   return recent_cpu;
 }
 
-void mlfqs_priority(struct thread *t);
+void mlfqs_priority(struct thread *t){
 
-void mlfqs_recent_cpu(struct thread *t);
+  ASSERT(t!= idle_thread);
+  int cur_priority = t->priority;
+  int recent_cpu = t->recent_cpu;
+  int nice = t->nice;
+  int priority = PRI_MAX - fp_to_int_round(div_mixed(recent_cpu,4)) - nice*2;
+  t->priority = priority;
+}
 
-void mlfqs_load_avg(void);
+void mlfqs_recent_cpu(struct thread *t){
+  ASSERT(t!= idle_thread);
+  int cur_recent_cpu = t->recent_cpu;
+  int recent_cpu = add_mixed(div_fp( mult_fp(cur_recent_cpu, mult_mixed(load_avg,2)),add_mixed (mult_mixed(load_avg,2),1)), t->nice)
+  t->recent_cpu = recent_cpu;
+}
 
-void mlfqs_increment(void);
+void mlfqs_load_avg(void){
+  int cur_load_avg = load_avg;
+  int ready_list_size = list_size(&ready_list);
 
-void mlfqs_recalc(void);
+  load_avg = add_fp(div_mixed(mult_mixed(cur_load_avg, 59), 60) , div_mixed (mult_mixed (int_to_fp(1), ready_list_size), 60)); 
+}
+
+void mlfqs_increment(void){
+
+}
+
+void mlfqs_recalc(void){
+  
+}
 
 
 /* Idle thread.  Executes when no other thread is ready to run.
