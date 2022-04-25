@@ -462,6 +462,7 @@ void thread_set_nice(int nice UNUSED)
   t->nice = nice;
   mlfqs_priority(t);
   test_max_priority();
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
@@ -529,11 +530,18 @@ void mlfqs_load_avg(void){
 }
 
 void mlfqs_increment(void){
-
+  struct thread *t = thread_current();
+  ASSERT(t!= idle_thread);
+  t->recent_cpu = add_mixed(t->recent_cpu,1);
 }
 
 void mlfqs_recalc(void){
-  
+  struct list_elem* e;
+  for(e=list_begin(&all_list); e!=list_end(&all_list); e=list_next(e)){
+    struct thread *t = list_entry(e,struct thread, allelem);
+    mlfqs_recent_cpu(t);
+    mlfqs_priority(t);
+  }
 }
 
 
