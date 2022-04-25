@@ -480,15 +480,28 @@ int thread_get_nice(void)
 /* Returns 100 times the system load average. */
 int thread_get_load_avg(void)
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level;
+  ASSERT(!intr_context());
+  old_level = intr_disable();
+
+  int load_avg = fp_to_int_round(mult_mixed(load_avg, 100));
+  
+  intr_set_level(old_level);
+  return load_avg;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void)
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level;
+  ASSERT(!intr_context());
+  old_level = intr_disable();
+
+  struct thread *t = thread_current();
+  int recent_cpu = fp_to_int_round( multi_mixed(t->recent_cpu, 100) );
+  
+  intr_set_level(old_level);
+  return recent_cpu;
 }
 
 void mlfqs_priority(struct thread *t);
