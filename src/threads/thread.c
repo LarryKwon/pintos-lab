@@ -20,6 +20,10 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+#define LOAD_AVG_DEFAULT 0
+#define NICE_DEFAULT 0
+#define RECENT_CPU_DEFAULT 0
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -64,6 +68,9 @@ static unsigned thread_ticks; /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
+
+/* mlfqs load_avg */
+int load_avg;
 
 static void kernel_thread(thread_func *, void *aux);
 
@@ -114,7 +121,7 @@ void thread_start(void)
   struct semaphore idle_started;
   sema_init(&idle_started, 0);
   thread_create("idle", PRI_MIN, idle, &idle_started);
-
+  load_avg = LOAD_AVG_DEFAULT;
   /* Start preemptive thread scheduling. */
   intr_enable();
 
@@ -561,6 +568,8 @@ init_thread(struct thread *t, const char *name, int priority)
   t->init_priority = priority;
   t->priority = priority;
   list_init(&t->donations);
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_DEFAULT;
   t->magic = THREAD_MAGIC;
   list_push_back(&all_list, &t->allelem);
 }
