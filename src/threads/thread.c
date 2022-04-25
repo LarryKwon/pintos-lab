@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -451,17 +452,29 @@ int thread_get_priority(void)
   return thread_current()->priority;
 }
 
-/* Sets the current thread's nice value to NICE. */
+/* nice 값을 할당하고, 우선순위를 다시 계산해서 다시 스케쥴링한다. */
 void thread_set_nice(int nice UNUSED)
 {
-  /* Not yet implemented. */
+  ASSERT(!intr_context());
+  enum intr_level old_level;
+  old_level = intr_disable();
+  strcut thread *t = thread_current();
+  t->nice = nice;
+  mlfqs_priority(t);
+  test_max_priority();
 }
 
 /* Returns the current thread's nice value. */
 int thread_get_nice(void)
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level;
+  ASSERT(!intr_context());
+
+  old_level = intr_disable();
+  struct thread *t = thread_current();
+  int nice = t->nice;
+  intr_set_level(old_level);
+  return nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -477,6 +490,17 @@ int thread_get_recent_cpu(void)
   /* Not yet implemented. */
   return 0;
 }
+
+void mlfqs_priority(struct thread *t);
+
+void mlfqs_recent_cpu(struct thread *t);
+
+void mlfqs_load_avg(void);
+
+void mlfqs_increment(void);
+
+void mlfqs_recalc(void);
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
 

@@ -105,7 +105,7 @@ struct thread
    /* mlfqs */
    int nice;
    int recent_cpu;
-   
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -158,9 +158,16 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
+/* mlfqs */
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void mlfqs_priority(struct thread *t);
+void mlfqs_recent_cpu(struct thread *t);
+void mlfqs_load_avg(void);
+void mlfqs_increment(void);
+void mlfqs_recalc(void);
 
 #endif /* threads/thread.h */
