@@ -163,8 +163,21 @@ void timer_print_stats(void)
 static void
 timer_interrupt(struct intr_frame *args UNUSED)
 {
+  
   ticks++;
   thread_tick();
+
+  if(thread_mlfqs){
+    mlfqs_increment();
+    if(ticks % TIMER_FREQ  == 0){
+      mlfqs_load_avg();
+      mlfqs_recent_cpu();
+    }
+    if(ticks%4==0){
+      mlfqs_recalc();
+    }
+  }
+
   if (get_next_tick_to_awake() <= ticks)
   {
     thread_awake(ticks);
