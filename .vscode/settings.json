@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "hash.h": "c",
+    "*.tcc": "c",
+    "functional": "c",
+    "random": "c",
+    "cmath": "c",
+    "type_traits": "c"
+  },
+  "C_Cpp.errorSquiggles": "Disabled"
+}

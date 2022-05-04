@@ -38,6 +38,30 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  char *token, *save_ptr;
+  int argc = 0;
+  for(token = strtok_r(fn_copy, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
+    argc ++;
+  }
+  char *argv[argc];
+  
+  int str_len = strlen(fn_copy);
+  token = fn_copy;
+  int nth = 0;
+  argv[nth] = token;
+  int i;
+  for(i=0; i<str_len; i++){
+    if(fn_copy[i]=='\0' && i!= str_len -1){
+      nth ++;
+      int j = i;
+      ++j;
+      token = fn_copy + j;
+      argv[nth] = token;
+    }
+  }
+
+  printf("%s %d\n", argv[0], argc);
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
