@@ -328,6 +328,12 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
       goto done;
     }
     file_ofs += sizeof phdr;
+    printf("%x\n", phdr.p_align);
+    printf("%x\n", phdr.p_filesz);
+    printf("%x\n", phdr.p_flags);
+    printf("%x\n", phdr.p_memsz);
+    printf("%x\n", phdr.p_offset);
+    printf("%x\n", phdr.p_paddr);
     printf("%x\n",phdr.p_vaddr);
     printf("%d\n",phdr.p_type);
     switch (phdr.p_type)
@@ -370,7 +376,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
         if (!load_segment(file, file_page, (void *)mem_page,
                           read_bytes, zero_bytes, writable)){
           printf("%s\n", "fail 3");
-          // goto done;
+          goto done;
         }
       }
       else{
