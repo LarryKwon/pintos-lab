@@ -37,35 +37,6 @@ tid_t process_execute(const char *file_name)
     return TID_ERROR;
   strlcpy(fn_copy, file_name, PGSIZE);
   printf("%s\n", fn_copy);
-  // int str_len = strlen(fn_copy);
-  // char *token, *save_ptr;
-
-  // int argc = 0;
-  // for (token = strtok_r(fn_copy, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
-  // {
-  //   argc++;
-  // }
-  // char* argv[argc+1];
-
-  // token = fn_copy;
-  // int nth = 0;
-  // argv[nth] = token;
-  // int i;
-  // for (i = 0; i < str_len; i++)
-  // {
-  //   if (fn_copy[i] == '\0' && i != str_len - 1)
-  //   {
-  //     nth++;
-  //     int j = i;
-  //     ++j;
-  //     token = fn_copy + j;
-  //     argv[nth] = token;
-  //   }
-  // }
-  // argv[argc] = NULL;
-  // printf("%s %d\n", argv[0], argc);
-  // printf("%s\n", argv[1]);
-  // printf("%p\n", argv[2]);
   char *ptr = file_name;
   char *t_name = strtok_r(ptr, " ", &ptr);
   printf("%s\n", t_name);
@@ -76,12 +47,64 @@ tid_t process_execute(const char *file_name)
   return tid;
 }
 
-/* parse_filename */
-void parse_filename(char *src, char *dest){
+/* parse argv and argc*/
+void parse_cmd(char *src, char **argv, int *argc)
+{
+  *argc = 0;
+  char *token, *save_ptr;
+  for (token = strtok_r(src, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
+  {
+    argv[*argc] = token;
+    (*argc)++;
+  }
+}
+
+void argument_stack(char **argv, int argc, void **esp)
+{
   int i;
-  strlcpy(dest,src, strlen(src)+1);
-  for(i=0; dest[i]!='\0' && dest[i] != ' '; i++);
-  dest[i] = '\0';
+  int len = 0;
+  int total_len = 0;
+
+  // push argv
+  for (i = argc - 1; i >= 0; i--)
+  {
+    len = strlen(argv[i]);
+    *esp -= len + 1;
+    total_len += len + 1;
+    strlcpy(*esp, argv[i], len + 1);
+    argv[i] = *esp;
+  }
+
+  // push word-align
+  int need_bytes = 0;
+  if (total_len % 4 != 0)
+  {
+    need_bytes = 4 - (total_len % 4);
+  }
+  *esp -= need_bytes;
+
+  // push NULL
+  *esp -= 4;
+  **(uint32_t **)esp = 0;
+
+  // push address of argv
+  for (i = argc - 1; i >= 0; i--)
+  {
+    *esp -= 4;
+    **(uint32_t **)esp = argv[i];
+  }
+
+  // push address of argv
+  *esp -= 4;
+  **(uint32_t **)esp = *esp + 4;
+
+  // push argc
+  *esp -= 4;
+  **(uint32_t **)esp = argc;
+
+  // push return address
+  *esp -= 4;
+  **(uint32_t **)esp = 0;
 }
 
 /* A thread function that loads a user process and starts it
@@ -94,44 +117,26 @@ start_process(void *file_name_)
   struct intr_frame if_;
   bool success;
 
-  // int argc = 0;
-  // char *token, *save_ptr;
-  // for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
-  // {
-  //   argc++;
-  // }
-  // char* argv[argc+1];
-
-  // token = file_name;
-  // int nth = 0;
-  // argv[nth] = token;
-  // int i;
-  // for (i = 0; i < str_len; i++)
-  // {
-  //   if (file_name[i] == '\0' && i != str_len - 1)
-  //   {
-  //     nth++;
-  //     int j = i;
-  //     ++j;
-  //     token = file_name + j;
-  //     argv[nth] = token;
-  //   }
-  // }
-  // argv[argc] = NULL;
-  // printf("%s %d\n", argv[0], argc);
-  // printf("%s\n", argv[1]);
-  // printf("%p\n", argv[2]);
-
-  char cmd_name[256];
-  parse_filename(file_name, cmd_name);
+  char *argv[LOADER_ARGS_LEN / 2 + 1];
+  int argc;
+  parse_cmd(file_name, argv, &argc);
+  printf("%s %d\n", argv[0], argc);
+  printf("%s\n", argv[1]);
+  printf("%p\n", argv[2]);
 
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load(cmd_name, &if_.eip, &if_.esp);
+  success = load(argv[0], &if_.eip, &if_.esp);
   printf("%s %d\n", "load complete", success);
+  if (success)
+  {
+    argument_stack(argv, argc, &if_.esp);
+    hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
+  }
+  
   /* If load failed, quit. */
   palloc_free_page(file_name);
   if (!success)
@@ -298,44 +303,46 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   file = filesys_open(file_name);
   if (file == NULL)
   {
-    printf("load: %s: open failed\n", file_name);
+    // printf("load: %s: open failed\n", file_name);
     goto done;
   }
-  printf("%s\n", "open success");
+  // printf("%s\n", "open success");
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
   {
-    printf("load: %s: error loading executable\n", file_name);
+    // printf("load: %s: error loading executable\n", file_name);
     goto done;
   }
-  printf("%s\n", "read success");
+  // printf("%s\n", "read success");
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
-  printf("%d\n",ehdr.e_phnum);
+  printf("%d\n", ehdr.e_phnum);
   for (i = 0; i < ehdr.e_phnum; i++)
   {
     struct Elf32_Phdr phdr;
-    printf("%s %d\n","for문 시작!!", i);
-    if (file_ofs < 0 || file_ofs > file_length(file)){
-      printf("%s\n", "fail 1");
+    // printf("%s %d\n","for문 시작!!", i);
+    if (file_ofs < 0 || file_ofs > file_length(file))
+    {
+      // printf("%s\n", "fail 1");
       goto done;
     }
     file_seek(file, file_ofs);
 
-    if (file_read(file, &phdr, sizeof phdr) != sizeof phdr){
-      printf("%s\n", "fail 2");
+    if (file_read(file, &phdr, sizeof phdr) != sizeof phdr)
+    {
+      // printf("%s\n", "fail 2");
       goto done;
     }
     file_ofs += sizeof phdr;
-    printf("%x\n", phdr.p_align);
-    printf("%x\n", phdr.p_filesz);
-    printf("%x\n", phdr.p_flags);
-    printf("%x\n", phdr.p_memsz);
-    printf("%x\n", phdr.p_offset);
-    printf("%x\n", phdr.p_paddr);
-    printf("%x\n",phdr.p_vaddr);
-    printf("%d\n",phdr.p_type);
+    // printf("%x\n", phdr.p_align);
+    // printf("%x\n", phdr.p_filesz);
+    // printf("%x\n", phdr.p_flags);
+    // printf("%x\n", phdr.p_memsz);
+    // printf("%x\n", phdr.p_offset);
+    // printf("%x\n", phdr.p_paddr);
+    // printf("%x\n",phdr.p_vaddr);
+    // printf("%d\n",phdr.p_type);
     switch (phdr.p_type)
     {
     case PT_NULL:
@@ -348,7 +355,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     case PT_DYNAMIC:
     case PT_INTERP:
     case PT_SHLIB:
-      printf("%s\n", "fail 5");
+      // printf("%s\n", "fail 5");
       goto done;
     case PT_LOAD:
       if (validate_segment(&phdr, file))
@@ -372,21 +379,23 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
           read_bytes = 0;
           zero_bytes = ROUND_UP(page_offset + phdr.p_memsz, PGSIZE);
         }
-        printf("%x\n", mem_page);
+        // printf("%x\n", mem_page);
         if (!load_segment(file, file_page, (void *)mem_page,
-                          read_bytes, zero_bytes, writable)){
-          printf("%s\n", "fail 3");
+                          read_bytes, zero_bytes, writable))
+        {
+          // printf("%s\n", "fail 3");
           goto done;
         }
       }
-      else{
-        printf("%s\n", "fail 4");
+      else
+      {
+        // printf("%s\n", "fail 4");
         goto done;
       }
       break;
     }
   }
-  printf("%s\n","header done");
+  printf("%s\n", "header done");
 
   /* Set up stack. */
   if (!setup_stack(esp))
@@ -473,8 +482,8 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
   ASSERT((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT(pg_ofs(upage) == 0);
   ASSERT(ofs % PGSIZE == 0);
-  printf("%s\n", "load segment");
-  printf("%d\n", writable);
+  // printf("%s\n", "load segment");
+  // printf("%d\n", writable);
   file_seek(file, ofs);
   while (read_bytes > 0 || zero_bytes > 0)
   {
@@ -486,15 +495,16 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 
     /* Get a page of memory. */
     uint8_t *kpage = palloc_get_page(PAL_USER);
-    if (kpage == NULL){
-      printf("%s\n", "load fail 1");
+    if (kpage == NULL)
+    {
+      // printf("%s\n", "load fail 1");
       return false;
     }
     /* Load this page. */
     if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes)
     {
       palloc_free_page(kpage);
-      printf("%s\n", "load fail 2");
+      // printf("%s\n", "load fail 2");
       return false;
     }
     memset(kpage + page_read_bytes, 0, page_zero_bytes);
@@ -503,7 +513,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
     if (!install_page(upage, kpage, writable))
     {
       palloc_free_page(kpage);
-      printf("%s\n", "load fail 3");
+      // printf("%s\n", "load fail 3");
       return false;
     }
 
